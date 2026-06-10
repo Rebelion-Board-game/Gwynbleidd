@@ -56,16 +56,14 @@
       <table class="striped">
         <thead>
           <tr>
-            <th style="width: 80px;">Rank</th>
             <th>Username</th>
             <th>Last Login</th>
             <th>Created At</th>
           </tr>
         </thead>
         <tbody>
-          {#each users as user, index}
+          {#each users as user}
             <tr>
-              <td><strong>#{index + 1}</strong></td>
               <td><span class="player-name">{user.username}</span></td>
               <td>
                 <small>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import LeaderboardManager from './LeaderboardManager.svelte';
   import UsersManager from './UsersManager.svelte';
+    import { nonpassive } from 'svelte/legacy';
 
   // Component props received from parent component
   export let token;
@@ -14,8 +15,14 @@
   let errorMessage = ''; 
   let apiKey = ''; 
   let showApiKey = false; 
+
+  let apiSecret = ''; 
+  let showApiSecret = false; 
+
+  let regenerating = false;  
   let loadingKey = false;
   let copied = false;
+  let copiedSecret = false;
 
   onMount(async () => {
     try {
@@ -33,40 +40,44 @@
     }
   });
 
-  async function fetchKeyIfNeeded() {
-    if (apiKey) return true;
+  async function fetchKeyIfNeeded(type) {
+    const cache = type === 'secret' ? apiSecret : apiKey;
+    if (cache) return true;
+    
     loadingKey = true;
     try {
-      const response = await fetch(`${API_BASE}/dev/games/${gameId}/api_key`, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      
-      if (response.ok) {
-        apiKey = data.api_key; 
+        const url = `${API_BASE}/dev/games/${gameId}/api_${type === 'secret' ? 'secret' : 'key'}`;
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.detail || `Failed to fetch API ${type}.`);
+            return false;
+        }
+        
+        if (type === 'secret') {
+            apiSecret = data.api_secret;
+        } else {
+            apiKey = data.api_key;
+        }
         return true;
-      } else {
-        alert(data.detail || 'Failed to fetch API key.');
-        return false;
-      }
+        
     } catch (err) {
-      alert('Network error while fetching API key.');
-      return false;
+        alert(`Network error while fetching API ${type}.`);
+        return false;
     } finally {
-      loadingKey = false;
+        loadingKey = false;
     }
   }
 
-  async function toggleReveal() {
-    if (showApiKey) {
-      showApiKey = false;
-      return;
-    }
-    const success = await fetchKeyIfNeeded();
-    if (success) {
-      showApiKey = true;
-    }
+  async function toggleRevealApiKey() {
+    showApiKey = showApiKey ? false : await fetchKeyIfNeeded('key');
+  }
+
+  async function toggleRevealApiSecret() {
+    showApiSecret = showApiSecret ? false : await fetchKeyIfNeeded('secret');
   }
 
   async function handleCopy() {
@@ -84,7 +95,22 @@
       alert('Failed to copy text to clipboard.');
     }
   }
-  let regenerating = false;
+  
+  async function handleCopySecret() {
+    const success = await fetchKeyIfNeeded('secret');
+    if (!success) return;
+
+    try {
+      await navigator.clipboard.writeText(apiSecret);
+      copiedSecret = true;
+
+      setTimeout(() => {
+        copiedSecret = false;
+      }, 1500);
+    } catch (err) {
+      alert('Failed to copy secret to clipboard.');
+    }
+  }
 
   async function handleRegenerate() {
     const confirmed = confirm(
@@ -106,7 +132,7 @@
         apiKey = ''; 
         showApiKey = false;
         
-        await toggleReveal(); 
+        await toggleRevealApiKey(); 
       } else {
         const data = await response.json().catch(() => ({}));
         alert(data.detail || "Failed to regenerate API key.");
@@ -158,7 +184,7 @@
             type="button" 
             class="outline contrast reveal-btn"
             disabled={loadingKey}
-            on:click={toggleReveal}
+            on:click={toggleRevealApiKey}
           >
             {showApiKey ? "Hide" : "Reveal"}
           </button>
@@ -176,12 +202,42 @@
           </button>
         </div>
 
+        <label for="api_secret">API SECRET</label>
+        <div class="credential-wrapper">
+          <input 
+            type={showApiSecret ? "text" : "password"} 
+            id="f" 
+            value={apiSecret || "No secret returned from database"} 
+            readonly 
+            class="secure-input"
+          >
+
+          <button 
+            type="button" 
+            class="outline contrast reveal-btn"
+            disabled={loadingKey || regenerating}
+            on:click={handleCopySecret}
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+
+          <button 
+            type="button" 
+            class="outline contrast reveal-btn"
+            disabled={loadingKey}
+            on:click={toggleRevealApiSecret}
+          >
+            {showApiSecret ? "Hide" : "Reveal"}
+          </button>
+
+        </div>
+
         <div class="panels-container">
           <div class="main-content-panel">
             <UsersManager {token} {API_BASE} {gameId} />
           </div>
 
-          <div class="main-content-panel" style="padding-top: 20px;">
+          <div class="main-content-panel">
             <LeaderboardManager {token} {API_BASE} {gameId} />
           </div>
         </div>
@@ -227,6 +283,13 @@
     margin-bottom: 0 !important;
     font-size: 0.8rem !important;
     border-radius: 4px !important;
+  }
+
+  .main-content-panel {
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 
 </style>
