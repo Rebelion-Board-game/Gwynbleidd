@@ -18,7 +18,8 @@ from datetime import datetime
 
 
 # JWT
-SECRET_KEY = os.getenv("JWT_SECRET","WhiteWolf")
+SECRET_KEY_DEVELOPER = os.getenv("JWT_SECRET","WhiteWolf")
+SECRET_KEY_PLAYER = os.getenv("JWT_SECRET","WhiteWolf_Player")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24h
 
@@ -59,6 +60,14 @@ class ScoreEntry(BaseModel):
 class ScoresResponse(BaseModel):
     scores: list[ScoreEntry]
 
+class UserEntry(BaseModel):
+    username: str
+    last_login: Optional[datetime] = None
+    created_at: datetime
+
+class UserResponse(BaseModel):
+    users: list[UserEntry]
+
 class PlayerAuthPayload(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
@@ -69,13 +78,13 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY_DEVELOPER, algorithm=ALGORITHM)
     return encoded_jwt
 
 def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY_DEVELOPER, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token claims.")
@@ -87,12 +96,12 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY_DEVELOPER, algorithm=ALGORITHM)
     return encoded_jwt
 
 # --- 2. PLAYERS JWT ---
 def create_player_access_token(player_id: int, game_id: int, username: str):
-    expire = datetime.now(timezone.utc) + timedelta(days=30)
+    expire = datetime.now(timezone.utc) + timedelta(days=3)
     to_encode = {
         "sub": str(player_id),
         "game_id": game_id,
@@ -100,7 +109,7 @@ def create_player_access_token(player_id: int, game_id: int, username: str):
         "role": "player",
         "exp": expire
     }
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY_PLAYER, algorithm=ALGORITHM)
 
 
 # --- 3. DEVELOPER MANAGEMENT PANEL ---
@@ -126,13 +135,14 @@ def register_developer(payload: DeveloperRegister, db: Connection = Depends(get_
 def create_game(payload: GameCreate, db: Connection = Depends(get_db),current_user_id: int = Depends(get_current_user_id)):
     l.info("i try to create game")
     api_key = f"ww_key_{secrets.token_hex(64)}"
+    api_secret = f"gw_secret_{secrets.token_hex(64)}"
     
     
     with db.cursor() as cursor:
         try:
             cursor.execute(
-                "INSERT INTO games (user_id, game_name, api_key) VALUES (%s, %s, %s) RETURNING *;",
-                (current_user_id, payload.game_name, api_key)
+                "INSERT INTO games (user_id, game_name, api_key, api_secret) VALUES (%s, %s, %s, %s) RETURNING *;",
+                (current_user_id, payload.game_name, api_key, api_secret)
             )
             game = cursor.fetchone()
             db.commit()
@@ -196,6 +206,34 @@ def get_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id:
         l.error(f"download game api error: {e}")
         raise HTTPException(status_code=500, detail="download game api error")
 
+@dev_router.get("/api/dev/games/{game_id}/api_secret")
+def get_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    try:
+        with db.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, game_name, api_secret 
+                FROM games 
+                WHERE id = %s AND user_id = %s;
+                """,
+                (game_id, current_user_id)
+            )
+            game = cursor.fetchone()
+            if not game:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Game not found or you do not have permission to view it."
+                )
+            # l.debug(f"api game return {game["api_secret"]}")
+            return {
+                "id": game["id"],
+                "game_name": game["game_name"],
+                "api_secret": game["api_secret"]
+            }
+    except Exception as e:
+        l.error(f"download game aapi_secretpi error: {e}")
+        raise HTTPException(status_code=500, detail="download game api_secret error")
+
 @dev_router.put("/api/dev/games/{game_id}/api_key_regenerate")
 def regenerate_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     try:
@@ -222,8 +260,12 @@ def regenerate_game_api(game_id: int,db: Connection = Depends(get_db), current_u
         l.error(f"api regenerate error: {e}")
         raise HTTPException(status_code=500, detail="api regenerate error")
 
+
 @dev_router.get("/api/{game_id}/scores",response_model=ScoresResponse)
 def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    """
+    Return best 20 players from leaderboards
+    """
     try:    
         with db.cursor() as cursor:
             cursor.execute(
@@ -233,7 +275,7 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
             game = cursor.fetchone()
             
             if not game:
-                raise HTTPException(status_code=401, detail="Game not found or you do not have permission to view it")
+                raise HTTPException(status_code=403, detail="Game not found or you do not have permission to view it")
                 
             cursor.execute(
                 """
@@ -254,6 +296,42 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
     except Exception as e:
         l.error(f"get_scores endpoint error: {e}")
         raise HTTPException(status_code=500, detail="get_scores endpoint error")
+
+
+@dev_router.get("/api/{game_id}/users",response_model=UserResponse)
+def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    """
+    Return 20 users from game
+    """
+    try:    
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM games WHERE user_id = %s AND id = %s;", 
+                (current_user_id, game_id)
+            )
+            game = cursor.fetchone()
+            
+            if not game:
+                raise HTTPException(status_code=403, detail="Game not found or you do not have permission to view it")
+                
+            cursor.execute(
+                """
+                SELECT username, last_login, created_at 
+                FROM players 
+                WHERE game_id = %s 
+                LIMIT 20;
+                """,
+                (game['id'],)
+            )
+                
+            rows = cursor.fetchall()
+            return {"users": rows}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        l.error(f"get_users endpoint error: {e}")
+        raise HTTPException(status_code=500, detail="get_users endpoint error")
 
 # --- 4. GODOT ENDPOINTS ---
 
@@ -303,32 +381,51 @@ def get_scores(game_id: int, username: Optional[str] = None, x_api_key: str = He
         raise HTTPException(status_code=500, detail="get_scores endpoint error")
 
 
-@godot_router.post("/api/godot/scores", status_code=status.HTTP_201_CREATED)
-def post_score(payload: ScorePayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
+@godot_router.post("/api/godot/{game_id}/scores", status_code=status.HTTP_201_CREATED)
+def post_score(game_id: int, payload: ScorePayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
     with db.cursor() as cursor:
-        cursor.execute("SELECT id, api_secret FROM games WHERE api_key = %s;", (x_api_key,))
+        cursor.execute("SELECT id, api_key_secret FROM games WHERE api_key = %s;", (x_api_key,))
         game = cursor.fetchone()
         
         if not game:
             raise HTTPException(status_code=401, detail="Invalid API Key.")
             
-        raw_string = f"{payload.player_name}:{payload.score}:"
-        server_hash = hashlib.sha256(raw_string.encode('utf-8') + game['api_secret'].encode('utf-8')).hexdigest()
+        l.debug(f"post score game: {game}")
         
-        if not hmac.compare_digest(server_hash, payload.hash):
-            raise HTTPException(status_code=403, detail="Score verification failed. Cheating detected!")
+        if payload.hash:
+            raw_string = f"{payload.player_name}:{payload.score}:"
+            server_hash = hashlib.sha256(raw_string.encode('utf-8') + game['api_key_secret'].encode('utf-8')).hexdigest()
+            
+            if not hmac.compare_digest(server_hash, payload.hash):
+                raise HTTPException(status_code=403, detail="Score verification failed. Cheating detected!")
             
         try:
+            # check if player exist:
             cursor.execute(
-                "INSERT INTO leaderboards (game_id, player_name, score) VALUES (%s, %s, %s);",
-                (game['id'], payload.player_name, payload.score)
+                "SELECT score FROM leaderboards WHERE game_id = %s AND player_name = %s;",
+                (game_id, payload.player_name)
             )
+            existing_score = cursor.fetchone()
+
+            if existing_score:
+                cursor.execute(
+                    "UPDATE leaderboards SET score = %s WHERE game_id = %s AND player_name = %s;",
+                    (payload.score, game_id, payload.player_name)
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO leaderboards (game_id, player_name, score) VALUES (%s, %s, %s);",
+                    (game_id, payload.player_name, payload.score)
+                )
+                
             db.commit()
-        except Exception:
+        except Exception as e:
             db.rollback()
+            l.error(f"Database error: {e}")
             raise HTTPException(status_code=500, detail="Database submission error.")
             
         return {"message": "Score saved successfully!"}
+
 
 
 @godot_router.post("/api/godot/{game_id}/players/register", status_code=status.HTTP_201_CREATED)
@@ -338,30 +435,41 @@ def register_game_player(game_id: int, payload: PlayerAuthPayload, x_api_key: st
     """
     try:
         with db.cursor() as cursor:
-            # 1. API key verification
+            #  API key verification
             cursor.execute("SELECT id FROM games WHERE api_key = %s AND id = %s;", (x_api_key, game_id))
-            game = cursor.fetchone()
-            if not game:
+            if not cursor.fetchone():
                 raise HTTPException(status_code=401, detail="Invalid API Key or Game ID.")
-                
-            hashed_password = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO players (game_id, username, password_hash) 
-                    VALUES (%s, %s, %s) 
-                    RETURNING id, username;
-                    """,
-                    (game_id, payload.username, hashed_password)
-                )
-                new_player = cursor.fetchone()
-                db.commit()
-                return {"message": "Player registered successfully", "username": new_player["username"]}
-                
-            except Exception:
-                db.rollback()
-                raise HTTPException(status_code=400, detail="Username is already taken in this game.")
+            # Check if user exist
+            cursor.execute(
+                "SELECT id FROM players WHERE game_id = %s AND username = %s;",
+                (game_id, payload.username)
+            )
+            if cursor.fetchone():
+                raise HTTPException(status_code=409, detail="Username already taken in this game.")
+            
+            # Hash + insert
+            hashed_password = bcrypt.hashpw(
+                payload.password.encode('utf-8'), 
+                bcrypt.gensalt()
+            ).decode('utf-8')
+            
+            cursor.execute(
+                """
+                INSERT INTO players (game_id, username, password_hash) 
+                VALUES (%s, %s, %s) 
+                RETURNING id, username;
+                """,
+                (game_id, payload.username, hashed_password)
+            )
+            new_player = cursor.fetchone()
+            db.commit()
+            
+            return {
+                "message": "Player registered successfully", 
+                "username": new_player["username"]
+            }
+            
     except HTTPException:
         raise
     except Exception as e:

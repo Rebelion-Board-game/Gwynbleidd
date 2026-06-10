@@ -5,31 +5,31 @@
   export let API_BASE;
   export let gameId;
 
-  // Stany komponentu
-  let scores = [];
+  let users = [];
   let loading = true;
   let errorMessage = '';
 
   onMount(async () => {
-    await fetchScores();
+    await fetchUsers();
   });
 
-  async function fetchScores() {
+  async function fetchUsers() {
     loading = true;
     errorMessage = '';
     try {
-      const response = await fetch(`${API_BASE}/${gameId}/scores`, {
+      const response = await fetch(`${API_BASE}/${gameId}/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
       
       if (response.ok) {
-        scores = data.scores || [];
+        // Endpoint zwraca {"users": rows}
+        users = data.users || [];
       } else {
-        errorMessage = data.detail || 'Failed to load scores.';
+        errorMessage = data.detail || 'Failed to load users.';
       }
     } catch (err) {
-      errorMessage = 'Network error while fetching scores.';
+      errorMessage = 'Network error while fetching users.';
     } finally {
       loading = false;
     }
@@ -38,7 +38,7 @@
 
 <div class="leaderboard-manager">
   <div class="board-header">
-    <h3>🏆 Top Scores</h3>
+    <h3>👥 Players</h3>
   </div>
 
   {#if errorMessage}
@@ -46,29 +46,37 @@
   {/if}
 
   {#if loading}
-    <p aria-busy="true">Loading leaderboard data...</p>
+    <p aria-busy="true">Loading players data...</p>
   {:else}
-    {#if scores.length === 0}
+    {#if users.length === 0}
       <div class="empty-state">
-        <p>No scores submitted yet. Connect your Godot game using the API Key to post the first score!</p>
+        <p>No players found for this game yet.</p>
       </div>
     {:else}
       <table class="striped">
         <thead>
           <tr>
             <th style="width: 80px;">Rank</th>
-            <th>Player Name</th>
-            <th>Score</th>
-            <th>Submitted At</th>
+            <th>Username</th>
+            <th>Last Login</th>
+            <th>Created At</th>
           </tr>
         </thead>
         <tbody>
-          {#each scores as entry, index}
+          {#each users as user, index}
             <tr>
               <td><strong>#{index + 1}</strong></td>
-              <td><span class="player-name">{entry.player_name}</span></td>
-              <td><span class="score-value">{entry.score}</span></td>
-              <td><small>{new Date(entry.timestamp).toLocaleString()}</small></td>
+              <td><span class="player-name">{user.username}</span></td>
+              <td>
+                <small>
+                  {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+                </small>
+              </td>
+              <td>
+                <small>
+                  {user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}
+                </small>
+              </td>
             </tr>
           {/each}
         </tbody>
@@ -97,12 +105,6 @@
   .player-name {
     font-weight: 500;
     color: #c9d1d9;
-  }
-  .score-value {
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    font-size: 1rem;
-    color: #58a6ff;
-    font-weight: bold;
   }
   .error-msg {
     color: #f85149;

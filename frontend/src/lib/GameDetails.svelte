@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import LeaderboardManager from './LeaderboardManager.svelte';
+  import UsersManager from './UsersManager.svelte';
 
   // Component props received from parent component
   export let token;
@@ -175,8 +176,14 @@
           </button>
         </div>
 
-        <div class="main-content-panel">
-          <LeaderboardManager {token} {API_BASE} {gameId} />
+        <div class="panels-container">
+          <div class="main-content-panel">
+            <UsersManager {token} {API_BASE} {gameId} />
+          </div>
+
+          <div class="main-content-panel" style="padding-top: 20px;">
+            <LeaderboardManager {token} {API_BASE} {gameId} />
+          </div>
         </div>
 
       </div>
@@ -221,4 +228,5 @@
     font-size: 0.8rem !important;
     border-radius: 4px !important;
   }
+
 </style>

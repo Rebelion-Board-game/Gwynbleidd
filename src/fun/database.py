@@ -60,6 +60,7 @@ def init_db():
                             current_users INT DEFAULT 0,
                             max_users INT DEFAULT 100,
                             api_key VARCHAR(255) UNIQUE NOT NULL,
+                            api_secret VARCHAR(255) UNIQUE NOT NULL,
                             require_auth BOOLEAN DEFAULT FALSE,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
@@ -71,6 +72,7 @@ def init_db():
                             id SERIAL PRIMARY KEY,
                             game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
                             player_name VARCHAR(100) NOT NULL,
+                            register_player_id INT DEFAULT NULL,
                             score INTEGER NOT NULL,
                             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
