@@ -9,7 +9,8 @@
   let token = localStorage.getItem('token') || '';
   let games = [];
   let gameName = '';
-  
+  let errorMessage = '';
+
   let currentForm = 'login'; 
   let globalSuccessMessage = '';
   let selectedGameId = null;
@@ -46,8 +47,31 @@
     }
   }
 
+  async function deleteGame(gameId, gameName) {
+    if (!confirm(`Delete "${gameName}"?`)) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/dev/games/${gameId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        loadGames();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.detail || 'Error');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+
   async function createGame() {
     if (!gameName) return;
+    errorMessage = '';
+
     try {
       const response = await fetch(`${API_BASE}/dev/games`, {
         method: 'POST',
@@ -61,9 +85,14 @@
       if (response.ok) {
         gameName = '';
         loadGames();
+      } else {
+        const errorData = await response.json();
+        // Capture 403 or any other backend error message
+        errorMessage = errorData.detail || 'Failed to create game.';
       }
     } catch (err) {
       console.error('Error creating game');
+      errorMessage = 'Connection error.';
     }
   }
 
@@ -121,11 +150,16 @@
       {:else} <div class="dashboard-grid">
           <div class="panel-card creation-panel">
             <h3>Register New Game</h3>
-            <p class="panel-desc">Deploy a secure high-score tracking layout instantly.</p>
+            <p>Create a new project workspace. Maximum limit is 5 active games per developer account. </p>
             
             <form on:submit|preventDefault={createGame}>
               <label for="game_name">Project Title</label>
               <input type="text" id="game_name" bind:value={gameName} placeholder="Cyberpunk Odyssey" required>
+              
+              {#if errorMessage}
+                <p class="error-msg">{errorMessage}</p>
+              {/if}
+              
               <button type="submit" class="primary-action">Create Game</button>
             </form>
           </div>
@@ -139,6 +173,7 @@
                   <tr>
                     <th>Project Name</th>
                     <th>Users</th>
+                    <th style="text-align: right; width: 80px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,11 +184,19 @@
                           ✨ {game.game_name}
                         </button>
                       </td>
-                      <td><code class="users-number">{game.current_users}/{game.max_users}</code></td>
+                      <td><code class="user-number">{game.current_users ?? 0}/{game.max_users ?? 100}</code></td>
+                      <td style="text-align: right;">
+                        <button 
+                          on:click={() => deleteGame(game.id, game.game_name)} 
+                          class="outline contrast delete-btn"
+                        >
+                          🗑️
+                        </button>
+                      </td>
                     </tr>
                   {:else}
                     <tr>
-                      <td colspan="2" class="empty-state">No active projects found. Spin up a database cluster using the registration block.</td>
+                      <td colspan="3" class="empty-state">No active projects found. Spin up a database cluster using the registration block.</td>
                     </tr>
                   {/each}
                 </tbody>
@@ -215,7 +258,8 @@
   th { color: #8b949e !important; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #21262d !important; padding: 0.75rem 1rem !important; }
   td { border-bottom: 1px solid #21262d !important; padding: 1rem !important; vertical-align: middle; }
   .game-title { font-weight: 600; color: #c9d1d9; }
-  .user-number { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.8rem; background: #0d1117 !important; border: 1px solid #30363d; padding: 4px 8px !important; border-radius: 6px; color: #58a6ff !important; display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .users-number { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.8rem; background: #0d1117 !important; border: 1px solid #30363d; padding: 4px 8px !important; border-radius: 6px; color: #58a6ff !important; display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .token-snippet.secret { color: #ff7b72 !important; max-width: 320px; }
   .empty-state { text-align: center; color: #8b949e; font-style: italic; padding: 3rem !important; }
+  .error-msg {color: #ff7b72;background: rgba(248, 81, 73, 0.1);border: 1px solid rgba(248, 81, 73, 0.2);padding: 0.5rem 0.75rem;border-radius: 6px;font-size: 0.85rem;margin-top: 0.5rem;margin-bottom: 0.5rem;}
 </style>

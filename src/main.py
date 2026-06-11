@@ -7,7 +7,8 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fun.database import init_db, db_pool, get_db
-from fun.api import dev_router, godot_router
+from fun.api_developer import dev_router
+from fun.api_godot import godot_router
 from fastapi.middleware.cors import CORSMiddleware
 
 logging_level = os.getenv("logging_level","INFO")

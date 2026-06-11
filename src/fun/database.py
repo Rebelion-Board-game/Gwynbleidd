@@ -47,6 +47,8 @@ def init_db():
                             id SERIAL PRIMARY KEY,
                             email VARCHAR(150) UNIQUE NOT NULL,
                             password_hash VARCHAR(255) NOT NULL,
+                            current_game_number INT DEFAULT 0,
+                            max_game INT DEFAULT 5,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
                     """)
@@ -70,10 +72,10 @@ def init_db():
                     cursor.execute("""
                         CREATE TABLE IF NOT EXISTS leaderboards (
                             id SERIAL PRIMARY KEY,
-                            game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
+                            game_id INT REFERENCES games(id) ON DELETE CASCADE,
                             player_name VARCHAR(100) NOT NULL,
                             register_player_id INT DEFAULT NULL,
-                            score INTEGER NOT NULL,
+                            score INT NOT NULL,
                             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
                     """)
@@ -82,7 +84,7 @@ def init_db():
                     cursor.execute("""
                         CREATE TABLE IF NOT EXISTS players (
                             id SERIAL PRIMARY KEY,
-                            game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+                            game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
                             username VARCHAR(50) NOT NULL,
                             password_hash VARCHAR(255) NOT NULL,
                             last_login TIMESTAMP WITH TIME ZONE DEFAULT NULL,
