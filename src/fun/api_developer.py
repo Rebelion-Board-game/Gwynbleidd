@@ -44,6 +44,7 @@ class ScoresResponse(BaseModel):
     scores: list[ScoreEntry]
 
 class UserEntry(BaseModel):
+    id: int
     username: str
     last_login: Optional[datetime] = None
     created_at: datetime
@@ -161,8 +162,6 @@ def get_developer_games(db: Connection = Depends(get_db), current_user_id: int =
         return {"games": games}
 
 
-from fastapi import HTTPException, status
-
 @dev_router.delete("/api/dev/games/{game_id}", status_code=status.HTTP_200_OK)
 def delete_developer_game(
     game_id: int, 
@@ -243,33 +242,6 @@ def get_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id:
         l.error(f"download game api error: {e}")
         raise HTTPException(status_code=500, detail="download game api error")
 
-@dev_router.get("/api/dev/games/{game_id}/api_secret")
-def get_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
-    try:
-        with db.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id, game_name, api_secret 
-                FROM games 
-                WHERE id = %s AND user_id = %s;
-                """,
-                (game_id, current_user_id)
-            )
-            game = cursor.fetchone()
-            if not game:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Game not found or you do not have permission to view it."
-                )
-            # l.debug(f"api game return {game["api_secret"]}")
-            return {
-                "id": game["id"],
-                "game_name": game["game_name"],
-                "api_secret": game["api_secret"]
-            }
-    except Exception as e:
-        l.error(f"download game aapi_secretpi error: {e}")
-        raise HTTPException(status_code=500, detail="download game api_secret error")
 
 @dev_router.put("/api/dev/games/{game_id}/api_key_regenerate")
 def regenerate_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
@@ -336,7 +308,7 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
 
 
 @dev_router.get("/api/{game_id}/users",response_model=UserResponse)
-def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+def get_users(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     """
     Return 20 users from game
     """
@@ -353,7 +325,7 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
                 
             cursor.execute(
                 """
-                SELECT username, last_login, created_at 
+                SELECT id, username, last_login, created_at 
                 FROM players 
                 WHERE game_id = %s 
                 LIMIT 20;
@@ -369,3 +341,37 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
     except Exception as e:
         l.error(f"get_users endpoint error: {e}")
         raise HTTPException(status_code=500, detail="get_users endpoint error")
+
+
+@dev_router.delete("/api/dev/games/{game_id}/players/{player_id}", status_code=status.HTTP_200_OK)
+def delete_game_player(game_id: int,player_id: int,db: Connection = Depends(get_db),current_user_id: int = Depends(get_current_user_id)):
+    l.info(f"delete player!")
+    try:
+        with db.cursor() as cursor:
+            # Verify game ownership
+            cursor.execute("SELECT id FROM games WHERE id = %s AND user_id = %s;", (game_id, current_user_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Game not found or unauthorized.")
+
+            # Delete player (assuming table is named 'players')
+            cursor.execute("DELETE FROM players WHERE id = %s AND game_id = %s RETURNING id;", (player_id, game_id))
+            deleted = cursor.fetchone()
+
+            if not deleted:
+                db.rollback()
+                raise HTTPException(status_code=404, detail="Player not found.")
+
+            # Decrement current_users count in games table
+            cursor.execute(
+                "UPDATE games SET current_users = GREATEST(0, current_users - 1) WHERE id = %s;",
+                (game_id,)
+            )
+
+            db.commit()
+            return {"message": "Player deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        l.error(f"delete endpoint error: {e}")
+        raise HTTPException(status_code=500, detail="delete endpoint error")
+ 

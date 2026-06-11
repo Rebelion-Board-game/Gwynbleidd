@@ -23,7 +23,6 @@
       const data = await response.json();
       
       if (response.ok) {
-        // Endpoint zwraca {"users": rows}
         users = data.users || [];
       } else {
         errorMessage = data.detail || 'Failed to load users.';
@@ -32,6 +31,32 @@
       errorMessage = 'Network error while fetching users.';
     } finally {
       loading = false;
+    }
+  }
+
+  async function deletePlayer(playerId, username) {
+    if (!confirm(`Permanently delete player "${username}"?`)) return;
+
+    if (!playerId) {
+      errorMessage = 'Player ID missing — refresh the page.';
+      return;
+    }
+
+    errorMessage = '';
+    try {
+      const response = await fetch(`${API_BASE}/dev/games/${gameId}/players/${playerId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        await fetchUsers();
+      } else {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || 'Failed to delete player.';
+      }
+    } catch (err) {
+      errorMessage = 'Network error while deleting player.';
     }
   }
 </script>
@@ -59,6 +84,7 @@
             <th>Username</th>
             <th>Last Login</th>
             <th>Created At</th>
+            <th style="text-align: right; width: 80px;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -75,6 +101,14 @@
                   {user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}
                 </small>
               </td>
+              <td style="text-align: right;">
+                <button 
+                  on:click={() => deletePlayer(user.id, user.username)} 
+                  class="outline contrast delete-btn"
+                >
+                  🗑️
+                </button>
+              </td>
             </tr>
           {/each}
         </tbody>
@@ -86,11 +120,6 @@
 <style>
   .muted {
     color: #8b949e;
-  }
-  .subtitle {
-    margin-top: -0.5rem;
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
   }
   .empty-state {
     text-align: center;
@@ -111,5 +140,18 @@
     border-radius: 6px;
     border: 1px solid rgba(248, 81, 73, 0.2);
     margin-bottom: 1rem;
+  }
+  .delete-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    background: transparent;
+    border: 1px solid #30363d;
+    cursor: pointer;
+    margin: 0;
+  }
+  .delete-btn:hover {
+    background: #21262d !important;
+    border-color: #f85149 !important;
   }
 </style>
