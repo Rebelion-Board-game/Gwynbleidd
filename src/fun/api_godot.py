@@ -15,12 +15,13 @@ from fun.database import get_db
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from datetime import datetime
-
+from fun.limiter import limiter
 
 godot_router = APIRouter(tags=["Godot Client API"])
 
 SECRET_KEY_PLAYER = os.getenv("JWT_SECRET","WhiteWolf_Player")
 ALGORITHM = "HS256"
+
 
 # --- Pydantic Validation Models ---
 class ScorePayload(BaseModel):
@@ -75,7 +76,8 @@ def create_player_access_token(player_id: int, game_id: int, username: str):
 # --- GODOT ENDPOINTS ---
 
 @godot_router.get("/api/godot/{game_id}/scores",response_model=ScoresResponse)
-def get_scores(game_id: int, username: Optional[str] = None, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
+@limiter.limit("15/minute")
+def get_scores(request: Request, game_id: int, username: Optional[str] = None, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
     try:    
         with db.cursor() as cursor:
             cursor.execute(
@@ -121,7 +123,8 @@ def get_scores(game_id: int, username: Optional[str] = None, x_api_key: str = He
 
 
 @godot_router.post("/api/godot/{game_id}/scores", status_code=status.HTTP_201_CREATED)
-def post_score(game_id: int, payload: ScorePayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
+@limiter.limit("10/minute")
+def post_score(request: Request, game_id: int, payload: ScorePayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
     with db.cursor() as cursor:
         cursor.execute("SELECT id, api_secret FROM games WHERE api_key = %s;", (x_api_key,))
         game = cursor.fetchone()
@@ -166,7 +169,8 @@ def post_score(game_id: int, payload: ScorePayload, x_api_key: str = Header(...)
 
 
 @godot_router.post("/api/godot/{game_id}/players/register", status_code=status.HTTP_201_CREATED)
-def register_game_player(game_id: int, payload: PlayerAuthPayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
+@limiter.limit("5/minute")
+def register_game_player(request: Request, game_id: int, payload: PlayerAuthPayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
     """
     Register player from godot game
     """
@@ -232,7 +236,8 @@ def register_game_player(game_id: int, payload: PlayerAuthPayload, x_api_key: st
 
 
 @godot_router.post("/api/godot/{game_id}/players/login")
-def login_game_player(game_id: int, payload: PlayerAuthPayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
+@limiter.limit("5/minute")
+def login_game_player(request: Request, game_id: int, payload: PlayerAuthPayload, x_api_key: str = Header(...), db: Connection = Depends(get_db)):
     """
     Player login from within the game. Returns a JWT token.
     """

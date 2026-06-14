@@ -5,3 +5,4 @@ pydantic-settings
 psycopg[pool]
 bcrypt
 python-dotenv
+slowapi
