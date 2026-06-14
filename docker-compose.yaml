@@ -10,8 +10,7 @@ services:
       - gwynbleidd_net
 
   app:
-    # image: ghcr.io/rebelion-board-game/gwynbleidd/gwynbleidd:develop
-    image: test
+    image: ghcr.io/rebelion-board-game/gwynbleidd/gwynbleidd:latest
     container_name: gwynbleidd_app
     restart: unless-stopped
     env_file: .env  
