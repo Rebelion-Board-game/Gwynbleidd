@@ -58,12 +58,6 @@ jobs:
         run: |
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_NAME=ghcr.io/$REPO/gwynbleidd:${{ github.ref_name }}" >> $GITHUB_ENV
-
-      - name: Prepare tags
-        run: |
-          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_NAME=ghcr.io/$REPO/gwynbleidd:${{ github.ref_name }}" >> $GITHUB_ENV
-          # TUTAJ BYŁ BRAK: Tworzymy bazową nazwę obrazu bez taga na końcu
           echo "IMAGE_BASE=ghcr.io/$REPO/gwynbleidd" >> $GITHUB_ENV
 
       - name: Log in to GHCR
