@@ -27,7 +27,7 @@ jobs:
         with:
           context: .
           push: false # Tylko budowanie, nie wypychamy
-          tags: ghcr.io/${{ github.repository }}/gwynbleidd:${{ github.ref_name }}
+          tags: ghcr.io/${{ github.repository | lower }}/gwynbleidd:${{ github.ref_name }}
           outputs: type=docker,dest=/tmp/image.tar
 
       - name: Upload image artifact
@@ -60,4 +60,4 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push image
-        run: docker push ghcr.io/${{ github.repository }}/gwynbleidd:${{ github.ref_name }}
+        run: docker push ghcr.io/${{ github.repository | lower }}/gwynbleidd:${{ github.ref_name }}
