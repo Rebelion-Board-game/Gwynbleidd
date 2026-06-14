@@ -48,8 +48,8 @@
   <Navbar {token} on:nav={handleNavigation} on:auth={handleAuthRedirect} on:logout={handleLogout} />
 
   <main class="main-content">
-    {#if currentPage === 'landing'}
-      <Landing {API_BASE} on:register={() => { authMode = 'register'; currentPage = 'auth'; }} />
+  {#if currentPage === 'landing'}
+    <Landing apiBase={API_BASE} on:getStarted={() => { currentPage = 'docs'; }} on:register={() => { authMode = 'register'; currentPage = 'auth'; }} />
     {:else if currentPage === 'auth'}
       <Auth {API_BASE} mode={authMode} on:loginSuccess={handleLoginSuccess} on:back={() => currentPage = 'landing'} />
     {:else if currentPage === 'dashboard'}

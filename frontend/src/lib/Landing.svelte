@@ -9,7 +9,7 @@
   <section class="hero">
     <div class="brand-badge">{appVersion}</div>
     <h1>Gwynbleidd</h1>
-    <p class="tagline">Self-hosted, opensoruce backend for Godot 4.</p>
+    <p class="tagline">Self-hosted, opensource backend for Godot 4.</p>
     <p class="sub-tagline">Inspired by SilentWolf</p>
     
     <div class="cta-group">
@@ -38,24 +38,6 @@
       <h3>Self-Hosted</h3>
       <p>Your VPS, your database, your rules. Zero pricing tiers or sudden usage billing limits.</p>
     </div>
-  </section>
-
-  <section class="code-preview">
-    <div class="code-header">
-      <div class="code-dots">
-        <span class="dot red"></span>
-        <span class="dot yellow"></span>
-        <span class="dot green"></span>
-      </div>
-      <span class="code-title">GameManager.gd</span>
-    </div>
-    <pre><code><span class="keyword">extends</span> Node
-
-<span class="keyword">func</span> <span class="function">_ready</span>():
-    <span class="class">Gwynbleidd</span>.<span class="function">init</span>(<span class="string">"your_api_key"</span>, game_id)
-
-<span class="keyword">func</span> <span class="function">game_over</span>(score):
-    <span class="class">Gwynbleidd</span>.<span class="function">submit_score</span>(<span class="string">"PlayerOne"</span>, score)</code></pre>
   </section>
 </div>
 

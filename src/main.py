@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from fastapi.staticfiles import StaticFiles
 
 
 logging_level = os.getenv("logging_level","INFO")
@@ -60,13 +61,15 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(godot_router)
 app.include_router(dev_router, include_in_schema=False)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 
 if __name__ == "__main__":
     try:
         uvicorn.run(
             "main:app", 
             host="0.0.0.0", 
-            port=443, 
+            port=4443, 
             reload=True
         )
     except KeyboardInterrupt:
