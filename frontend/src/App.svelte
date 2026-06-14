@@ -5,12 +5,14 @@
   import Landing from './lib/Landing.svelte';
   import Auth from './lib/Auth.svelte';
   import Dashboard from './lib/Dashboard.svelte';
+  import Documentation from './lib/Documentation.svelte';
 
   let currentPage = 'landing'; 
   let authMode = 'login';      
   let token = '';              
   
-  const API_BASE = 'http://localhost:8000/api/dev'; 
+  const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:8000';
+  const API_BASE = `${APP_URL}/api/dev`;
 
   onMount(() => {
     const savedToken = localStorage.getItem('authToken');
@@ -47,15 +49,17 @@
 
   <main class="main-content">
     {#if currentPage === 'landing'}
-      <Landing {API_BASE} on:getStarted={() => { authMode = 'register'; currentPage = 'auth'; }} />
+      <Landing {API_BASE} on:register={() => { authMode = 'register'; currentPage = 'auth'; }} />
     {:else if currentPage === 'auth'}
       <Auth {API_BASE} mode={authMode} on:loginSuccess={handleLoginSuccess} on:back={() => currentPage = 'landing'} />
     {:else if currentPage === 'dashboard'}
       <Dashboard {API_BASE} {token} />
+    {:else if currentPage === 'docs'}
+      <Documentation {APP_URL} />
     {/if}
   </main>
 
-  <Footer />
+  <Footer on:nav={handleNavigation} />
 </div>
 
 <style>

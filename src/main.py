@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     db_pool.close()
 
 app = FastAPI(
-    title="White Wolf SaaS Backend", 
+    title="Gwynbleidd SaaS Backend", 
     description="High-performance connection-pooled SaaS backend",
     lifespan=lifespan,
     docs_url="/docs/godot",

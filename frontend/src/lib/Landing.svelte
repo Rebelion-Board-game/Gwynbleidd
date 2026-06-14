@@ -13,10 +13,10 @@
     <p class="sub-tagline">Inspired by SilentWolf</p>
     
     <div class="cta-group">
-      <button class="btn-primary" on:click={() => dispatch('auth', 'register')}>
+      <button class="btn-primary" on:click={() => dispatch('getStarted')}>
         Get Started
       </button>
-      <button class="btn-outline" on:click={() => dispatch('auth', 'login')}>
+      <button class="btn-outline" on:click={() => dispatch('register')}>
         Sign In
       </button>
     </div>

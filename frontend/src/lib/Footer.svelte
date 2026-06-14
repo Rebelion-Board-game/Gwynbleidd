@@ -1,3 +1,8 @@
+<script>
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
+</script>
+
 <footer class="site-footer">
   <div class="container footer-content">
     <div class="footer-left">
@@ -9,13 +14,25 @@
       <p class="footer-copy">Open source backend for Godot by slime3000fly</p>
     </div>
     <nav class="footer-right" aria-label="Footer navigation">
-      <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <a href="#" on:click|preventDefault>Documentation</a>
+      <a href="https://github.com/Rebelion-Board-game/Gwynbleidd" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <button class="nav-link-btn" on:click={() => dispatch('nav', 'docs')}>Documentation</button>
     </nav>
   </div>
 </footer>
 
 <style>
+  .nav-link-btn {
+    background: none;
+    border: none;
+    color: #58a6ff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+  }
+  .nav-link-btn:hover {
+    color: #79c0ff;
+    text-decoration: underline;
+  }
   .site-footer {
     background: #161b22;
     border-top: 1px solid #30363d;

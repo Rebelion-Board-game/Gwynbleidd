@@ -17,7 +17,8 @@
         <button class="btn-ghost" on:click={() => dispatch('auth', 'login')}>Sign In</button>
         <button class="btn-primary" on:click={() => dispatch('auth', 'register')}>Get Started</button>
       {:else}
-        <button class="btn-ghost" on:click={() => dispatch('logout')}>Logout</button>
+        <button class="btn-ghost" on:click={() => dispatch('nav', 'dashboard')}>Dashboard</button>
+        <button class="btn-primary" on:click={() => dispatch('logout')}>Logout</button>
       {/if}
     </nav>
   </div>
@@ -25,7 +26,6 @@
 
 <style>
   .main-header {
-    /* background: #0b1120; */
     border-bottom: 1px solid #334155;
     padding: 0.85rem 0;
   }
