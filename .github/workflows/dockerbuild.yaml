@@ -59,6 +59,13 @@ jobs:
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_NAME=ghcr.io/$REPO/gwynbleidd:${{ github.ref_name }}" >> $GITHUB_ENV
 
+      - name: Prepare tags
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME=ghcr.io/$REPO/gwynbleidd:${{ github.ref_name }}" >> $GITHUB_ENV
+          # TUTAJ BYŁ BRAK: Tworzymy bazową nazwę obrazu bez taga na końcu
+          echo "IMAGE_BASE=ghcr.io/$REPO/gwynbleidd" >> $GITHUB_ENV
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -71,6 +78,6 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}
           
           if [ "${{ github.ref_name }}" = "main" ]; then
-            docker tag ${{ env.IMAGE_NAME }} ${{ env.IMAGE_LATEST }}
-            docker push ${{ env.IMAGE_LATEST }}
+            docker tag ${{ env.IMAGE_NAME }} ${{ env.IMAGE_BASE }}:latest
+            docker push ${{ env.IMAGE_BASE }}:latest
           fi
