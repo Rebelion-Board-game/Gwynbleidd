@@ -6,3 +6,4 @@ psycopg[pool]
 bcrypt
 python-dotenv
 slowapi
+coloredlogs
