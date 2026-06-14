@@ -82,6 +82,8 @@
     border: 1px solid #334155;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    margin: 0 auto;
   }
 
   h2 {

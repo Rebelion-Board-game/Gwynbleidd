@@ -15,7 +15,7 @@
     <nav class="nav-links" aria-label="Main navigation">
       {#if !token}
         <button class="btn-ghost" on:click={() => dispatch('auth', 'login')}>Sign In</button>
-        <button class="btn-primary" on:click={() => dispatch('auth', 'register')}>Get Started</button>
+        <button class="btn-primary" on:click={() => dispatch('nav', 'docs')}>Get Started</button>
       {:else}
         <button class="btn-ghost" on:click={() => dispatch('nav', 'dashboard')}>Dashboard</button>
         <button class="btn-primary" on:click={() => dispatch('logout')}>Logout</button>
