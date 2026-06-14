@@ -48,7 +48,7 @@ def init_db():
                             email VARCHAR(150) UNIQUE NOT NULL,
                             password_hash VARCHAR(255) NOT NULL,
                             current_game_number INT DEFAULT 0,
-                            max_game INT DEFAULT 5,
+                            max_game INT DEFAULT 3,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
                     """)
@@ -60,7 +60,7 @@ def init_db():
                             user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                             game_name VARCHAR(100) NOT NULL,
                             current_users INT DEFAULT 0,
-                            max_users INT DEFAULT 100,
+                            max_users INT DEFAULT 500,
                             api_key VARCHAR(255) UNIQUE NOT NULL,
                             api_secret VARCHAR(255) UNIQUE NOT NULL,
                             require_auth BOOLEAN DEFAULT FALSE,
