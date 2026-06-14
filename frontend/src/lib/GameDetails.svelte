@@ -2,13 +2,11 @@
   import { onMount } from 'svelte';
   import LeaderboardManager from './LeaderboardManager.svelte';
   import UsersManager from './UsersManager.svelte';
-    import { nonpassive } from 'svelte/legacy';
 
-  // Component props received from parent component
   export let token;
   export let API_BASE;
   export let gameId;
-  export let onBack; // Callback function to return to the dashboard list
+  export let onBack;
 
   let gameDetails = null;
   let loading = true;
@@ -26,7 +24,7 @@
 
   onMount(async () => {
     try {
-      const response = await fetch(`${API_BASE}/dev/games`, {
+      const response = await fetch(`${API_BASE}/games`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -46,7 +44,7 @@
     
     loadingKey = true;
     try {
-        const url = `${API_BASE}/dev/games/${gameId}/api_${type === 'secret' ? 'secret' : 'key'}`;
+        const url = `${API_BASE}/games/${gameId}/api_${type === 'secret' ? 'secret' : 'key'}`;
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -81,16 +79,13 @@
   }
 
   async function handleCopy() {
-    const success = await fetchKeyIfNeeded();
+    const success = await fetchKeyIfNeeded('key');
     if (!success) return;
 
     try {
       await navigator.clipboard.writeText(apiKey);
       copied = true;
-
-      setTimeout(() => {
-        copied = false;
-      }, 1500);
+      setTimeout(() => { copied = false; }, 1500);
     } catch (err) {
       alert('Failed to copy text to clipboard.');
     }
@@ -103,10 +98,7 @@
     try {
       await navigator.clipboard.writeText(apiSecret);
       copiedSecret = true;
-
-      setTimeout(() => {
-        copiedSecret = false;
-      }, 1500);
+      setTimeout(() => { copiedSecret = false; }, 1500);
     } catch (err) {
       alert('Failed to copy secret to clipboard.');
     }
@@ -121,17 +113,15 @@
 
     regenerating = true;
     try {
-      const response = await fetch(`${API_BASE}/dev/games/${gameId}/api_key_regenerate`, {
+      const response = await fetch(`${API_BASE}/games/${gameId}/api_key_regenerate`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.status === 204) {
         alert("API Key successfully revoked and regenerated!");
-        
         apiKey = ''; 
         showApiKey = false;
-        
         await toggleRevealApiKey(); 
       } else {
         const data = await response.json().catch(() => ({}));
@@ -145,151 +135,264 @@
   }
 </script>
 
-
-<div class="panel-card">
-  <button on:click={onBack} class="outline secondary" style="margin-bottom: 1.5rem; width: auto;">
-    ← Back to Dashboard
-  </button>
+<div class="workspace-container">
+  <div class="top-nav">
+    <button on:click={onBack} class="back-btn">
+      ← Back to Dashboard
+    </button>
+  </div>
 
   {#if loading}
-    <p aria-busy="true">Loading game workspace...</p>
+    <div class="loading-state">Loading game workspace...</div>
+  {:else if errorMessage}
+    <div class="error-state">{errorMessage}</div>
   {:else}
     {#if gameDetails}
-      <h2>🎮 {gameDetails.game_name}</h2>
-      <p class="subtitle">Game ID: <code>{gameDetails.id}</code></p>
-      
-      <hr />
+      <header class="game-header">
+        <h2>🎮 {gameDetails.game_name}</h2>
+        <p class="subtitle">Game ID: <code>{gameDetails.id}</code></p>
+      </header>
 
-      <div class="credentials-section">
-        <label for="api_key">API Key</label>
-        <div class="credential-wrapper">
-          <input 
-            type={showApiKey ? "text" : "password"} 
-            id="f" 
-            value={apiKey || "No key returned from database"} 
-            readonly 
-            class="secure-input"
-          >
-
-          <button 
-            type="button" 
-            class="outline contrast reveal-btn"
-            disabled={loadingKey || regenerating}
-            on:click={handleCopy}
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
-
-          <button 
-            type="button" 
-            class="outline contrast reveal-btn"
-            disabled={loadingKey}
-            on:click={toggleRevealApiKey}
-          >
-            {showApiKey ? "Hide" : "Reveal"}
-          </button>
-
-        </div>
-
-        <div style="margin-top: 1rem; text-align: right;">
-          <button 
-            type="button" 
-            class="outline secondary revoke-btn"
-            disabled={regenerating}
-            on:click={handleRegenerate}
-          >
-            {regenerating ? "Regenerating..." : "Revoke & Regenerate Key"}
-          </button>
-        </div>
-
-        <label for="api_secret">API SECRET</label>
-        <div class="credential-wrapper">
-          <input 
-            type={showApiSecret ? "text" : "password"} 
-            id="f" 
-            value={apiSecret || "No secret returned from database"} 
-            readonly 
-            class="secure-input"
-          >
-
-          <button 
-            type="button" 
-            class="outline contrast reveal-btn"
-            disabled={loadingKey || regenerating}
-            on:click={handleCopySecret}
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
-
-          <button 
-            type="button" 
-            class="outline contrast reveal-btn"
-            disabled={loadingKey}
-            on:click={toggleRevealApiSecret}
-          >
-            {showApiSecret ? "Hide" : "Reveal"}
-          </button>
-
-        </div>
-
-        <div class="panels-container">
-          <div class="main-content-panel">
-            <UsersManager {token} {API_BASE} {gameId} />
+      <section class="panel-card credentials-card">
+        <h3>Security Credentials</h3>
+        <p class="card-desc">Use these credentials inside your Godot project configuration.</p>
+        
+        <div class="credential-group">
+          <label for="api_key">API Key</label>
+          <div class="credential-wrapper">
+            <input 
+              type={showApiKey ? "text" : "password"} 
+              id="api_key" 
+              value={apiKey || "••••••••••••••••••••••••••••••••"} 
+              readonly 
+              class="secure-input"
+            >
+            <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopy}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+            <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiKey}>
+              {showApiKey ? "Hide" : "Reveal"}
+            </button>
           </div>
-
-          <div class="main-content-panel">
-            <LeaderboardManager {token} {API_BASE} {gameId} />
+          <div class="revoke-container">
+            <button type="button" class="revoke-btn" disabled={regenerating} on:click={handleRegenerate}>
+              {regenerating ? "Regenerating..." : "Revoke & Regenerate Key"}
+            </button>
           </div>
         </div>
 
+        <div class="credential-group">
+          <label for="api_secret">API Secret</label>
+          <div class="credential-wrapper">
+            <input 
+              type={showApiSecret ? "text" : "password"} 
+              id="api_secret" 
+              value={apiSecret || "••••••••••••••••••••••••••••••••"} 
+              readonly 
+              class="secure-input"
+            >
+            <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopySecret}>
+              {copiedSecret ? "Copied!" : "Copy"}
+            </button>
+            <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiSecret}>
+              {showApiSecret ? "Hide" : "Reveal"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="panels-stack">
+        <div class="panel-card main-content-panel">
+          <UsersManager {token} {API_BASE} {gameId} />
+        </div>
+
+        <div class="panel-card main-content-panel">
+          <LeaderboardManager {token} {API_BASE} {gameId} />
+        </div>
       </div>
     {:else}
-      <p>Game workspace not found.</p>
+      <div class="error-state">Game workspace not found.</div>
     {/if}
   {/if}
 </div>
 
 <style>
-  /* Container layout to bind the input and button together */
+  .workspace-container {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem 2rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .top-nav {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .back-btn {
+    background: none;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .back-btn:hover {
+    background-color: #1e293b;
+    color: #f8fafc;
+    border-color: #64748b;
+  }
+
+  .game-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .game-header h2 {
+    color: #f8fafc;
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    color: #94a3b8;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .subtitle code {
+    background: #1e293b;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: #f1f5f9;
+  }
+
+  .panel-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .credentials-card h3 {
+    color: #f8fafc;
+    margin: 0 0 0.25rem 0;
+    font-size: 1.4rem;
+  }
+
+  .card-desc {
+    color: #94a3b8;
+    margin: 0 0 2rem 0;
+    font-size: 0.95rem;
+  }
+
+  .credential-group {
+    margin-bottom: 2rem;
+  }
+
+  .credential-group:last-child {
+    margin-bottom: 0;
+  }
+
+  label {
+    display: block;
+    color: #cbd5e1;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
   .credential-wrapper {
     display: flex;
-    gap: 0; /* Clean attached look */
     align-items: center;
-    background: #0d1117 !important; /* Matches background to look like text snippet */
-    border: 1px solid #30363d;
+    background: #0f172a;
+    border: 1px solid #475569;
     border-radius: 6px;
-    padding-right: 8px;
+    padding: 0.25rem;
     overflow: hidden;
   }
 
-  /* Removes the input field styling to make it look like a secure token snippet */
   .secure-input {
     background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
-    margin-bottom: 0 !important;
+    outline: none !important;
     flex: 1;
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    font-size: 0.9rem;
-    color: #58a6ff !important;
-    padding: 0.75rem 1rem !important;
-    user-select: all; /* Allows easy double-click copying */
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: #38bdf8 !important;
+    padding: 0.6rem 1rem !important;
   }
 
-  /* Compact button styling inside the component wrapper */
-  .reveal-btn {
-    width: auto !important;
-    padding: 0.4rem 1rem !important;
-    margin-bottom: 0 !important;
-    font-size: 0.8rem !important;
-    border-radius: 4px !important;
+  .action-btn {
+    background: #1e293b;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 4px;
+    margin-right: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .action-btn:hover:not(:disabled) {
+    background: #0f172a;
+    color: #f8fafc;
+    border-color: #64748b;
+  }
+
+  .revoke-container {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .revoke-btn {
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .revoke-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  .panels-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
   }
 
   .main-content-panel {
-    padding-top: 20px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 
+  .loading-state, .error-state {
+    text-align: center;
+    color: #94a3b8;
+    padding: 4rem;
+    font-size: 1.1rem;
+  }
+
+  .error-state {
+    color: #f87171;
+  }
 </style>

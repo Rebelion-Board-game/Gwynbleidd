@@ -17,7 +17,7 @@
     loading = true;
     errorMessage = '';
     try {
-      const response = await fetch(`${API_BASE}/${gameId}/users`, {
+      const response = await fetch(`${API_BASE}/games/${gameId}/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -37,14 +37,8 @@
   async function deletePlayer(playerId, username) {
     if (!confirm(`Permanently delete player "${username}"?`)) return;
 
-    if (!playerId) {
-      errorMessage = 'Player ID missing — refresh the page.';
-      return;
-    }
-
-    errorMessage = '';
     try {
-      const response = await fetch(`${API_BASE}/dev/games/${gameId}/players/${playerId}`, {
+      const response = await fetch(`${API_BASE}/games/${gameId}/players/${playerId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -61,51 +55,38 @@
   }
 </script>
 
-<div class="leaderboard-manager">
-  <div class="board-header">
-    <h3>👥 Players</h3>
+<div class="manager-container">
+  <div class="header">
+    <h3>👥 Registered Players</h3>
   </div>
 
   {#if errorMessage}
-    <p class="error-msg">❌ {errorMessage}</p>
+    <p class="error-msg">{errorMessage}</p>
   {/if}
 
   {#if loading}
-    <p aria-busy="true">Loading players data...</p>
+    <div class="loading">Loading players...</div>
+  {:else if users.length === 0}
+    <div class="empty-state">No players found for this game yet.</div>
   {:else}
-    {#if users.length === 0}
-      <div class="empty-state">
-        <p>No players found for this game yet.</p>
-      </div>
-    {:else}
-      <table class="striped">
+    <div class="table-wrapper">
+      <table>
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Last Login</th>
-            <th>Created At</th>
-            <th style="text-align: right; width: 80px;">Actions</th>
+            <th class="col-username">Username</th>
+            <th class="col-login">Last Login</th>
+            <th class="col-created">Created At</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           {#each users as user}
             <tr>
-              <td><span class="player-name">{user.username}</span></td>
-              <td>
-                <small>
-                  {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
-                </small>
-              </td>
-              <td>
-                <small>
-                  {user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}
-                </small>
-              </td>
-              <td style="text-align: right;">
-                <button 
-                  on:click={() => deletePlayer(user.id, user.username)} 
-                  class="outline contrast delete-btn"
-                >
+              <td class="col-username player-name">{user.username}</td>
+              <td class="col-login date-cell">{user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+              <td class="col-created date-cell">{user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</td>
+              <td class="col-actions text-right">
+                <button on:click={() => deletePlayer(user.id, user.username)} class="delete-btn">
                   🗑️
                 </button>
               </td>
@@ -113,45 +94,92 @@
           {/each}
         </tbody>
       </table>
-    {/if}
+    </div>
   {/if}
 </div>
 
 <style>
-  .muted {
-    color: #8b949e;
+  .manager-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem;
-    background: #161b22;
-    border-radius: 6px;
-    color: #8b949e;
-    border: 1px dashed #30363d;
+
+  .header h3 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.25rem;
   }
-  .player-name {
+
+  .table-wrapper {
+    overflow-x: auto;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    table-layout: fixed;
+  }
+
+  th {
+    color: #94a3b8;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #334155;
     font-weight: 500;
-    color: #c9d1d9;
   }
+
+  td {
+    padding: 0.75rem 1rem;
+    color: #cbd5e1;
+    border-bottom: 1px solid #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .col-username { width: 25%; text-align: left; }
+  .col-login { width: 30%; text-align: left; }
+  .col-created { width: 30%; text-align: left; }
+  .col-actions { width: 15%; text-align: right; }
+
+  .player-name { font-weight: 600; color: #38bdf8; }
+  .date-cell { color: #94a3b8; font-size: 0.85rem; font-family: monospace; }
+  .text-right { text-align: right; }
+
+  .delete-btn {
+    background: transparent;
+    border: 1px solid #475569;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+
   .error-msg {
-    color: #f85149;
-    background: rgba(248, 81, 73, 0.1);
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
     padding: 0.75rem;
     border-radius: 6px;
-    border: 1px solid rgba(248, 81, 73, 0.2);
-    margin-bottom: 1rem;
+    border: 1px solid rgba(239, 68, 68, 0.2);
   }
-  .delete-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    border-radius: 4px;
-    background: transparent;
-    border: 1px solid #30363d;
-    cursor: pointer;
-    margin: 0;
-  }
-  .delete-btn:hover {
-    background: #21262d !important;
-    border-color: #f85149 !important;
+
+  .loading, .empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: #94a3b8;
+    background: #0f172a;
+    border-radius: 8px;
+    border: 1px solid #334155;
   }
 </style>

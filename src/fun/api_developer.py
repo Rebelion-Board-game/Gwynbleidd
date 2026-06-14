@@ -243,6 +243,35 @@ def get_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id:
         raise HTTPException(status_code=500, detail="download game api error")
 
 
+@dev_router.get("/api/dev/games/{game_id}/api_secret")
+def get_game_secret(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    try:
+        with db.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, game_name, api_secret 
+                FROM games 
+                WHERE id = %s AND user_id = %s;
+                """,
+                (game_id, current_user_id)
+            )
+            game = cursor.fetchone()
+            if not game:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Game not found or you do not have permission to view it."
+                )
+            # l.debug(f"api game return {game["api_secret"]}")
+            return {
+                "id": game["id"],
+                "game_name": game["game_name"],
+                "api_secret": game["api_secret"]
+            }
+    except Exception as e:
+        l.error(f"download game aapi_secretpi error: {e}")
+        raise HTTPException(status_code=500, detail="download game api_secret error")
+
+
 @dev_router.put("/api/dev/games/{game_id}/api_key_regenerate")
 def regenerate_game_api(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     try:
@@ -270,7 +299,7 @@ def regenerate_game_api(game_id: int,db: Connection = Depends(get_db), current_u
         raise HTTPException(status_code=500, detail="api regenerate error")
 
 
-@dev_router.get("/api/{game_id}/scores",response_model=ScoresResponse)
+@dev_router.get("/api/dev/games/{game_id}/scores",response_model=ScoresResponse)
 def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     """
     Return best 20 players from leaderboards
@@ -307,7 +336,7 @@ def get_scores(game_id: int,db: Connection = Depends(get_db), current_user_id: i
         raise HTTPException(status_code=500, detail="get_scores endpoint error")
 
 
-@dev_router.get("/api/{game_id}/users",response_model=UserResponse)
+@dev_router.get("/api/dev/games/{game_id}/users",response_model=UserResponse)
 def get_users(game_id: int,db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
     """
     Return 20 users from game

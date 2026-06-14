@@ -1,265 +1,80 @@
 <script>
   import { onMount } from 'svelte';
-  import Login from './lib/Login.svelte';
-  import Register from './lib/Register.svelte';
-  import GameDetails from './lib/GameDetails.svelte';
+  import Navbar from './lib/Navbar.svelte';
+  import Footer from './lib/Footer.svelte';
+  import Landing from './lib/Landing.svelte';
+  import Auth from './lib/Auth.svelte';
+  import Dashboard from './lib/Dashboard.svelte';
 
-  const API_BASE = 'http://localhost:8000/api';
-
-  let token = localStorage.getItem('token') || '';
-  let games = [];
-  let gameName = '';
-  let errorMessage = '';
-
-  let currentForm = 'login'; 
-  let globalSuccessMessage = '';
-  let selectedGameId = null;
+  let currentPage = 'landing'; 
+  let authMode = 'login';      
+  let token = '';              
+  
+  const API_BASE = 'http://localhost:8000/api/dev'; 
 
   onMount(() => {
-    if (token) loadGames();
+    const savedToken = localStorage.getItem('authToken');
+    if (savedToken) {
+      token = savedToken;
+      currentPage = 'dashboard';
+    }
   });
 
-  function onLoginSuccess(event) {
+  function handleNavigation(event) {
+    currentPage = event.detail;
+  }
+
+  function handleAuthRedirect(event) {
+    authMode = event.detail;
+    currentPage = 'auth';
+  }
+
+  function handleLoginSuccess(event) {
     token = event.detail.token;
-    localStorage.setItem('token', token);
-    globalSuccessMessage = '';
-    loadGames();
+    localStorage.setItem('authToken', token);
+    currentPage = 'dashboard';
   }
 
-  function onRegisterSuccess() {
-    globalSuccessMessage = 'Account created successfully! You can now log in below.';
-    currentForm = 'login';
-  }
-
-  async function loadGames() {
-    try {
-      const response = await fetch(`${API_BASE}/dev/games`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        games = data.games;
-      } else {
-        logout();
-      }
-    } catch (err) {
-      console.error('Connection failed');
-    }
-  }
-
-  async function deleteGame(gameId, gameName) {
-    if (!confirm(`Delete "${gameName}"?`)) return;
-
-    try {
-      const response = await fetch(`${API_BASE}/dev/games/${gameId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        loadGames();
-      } else {
-        const errorData = await response.json();
-        alert(errorData.detail || 'Error');
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-
-  async function createGame() {
-    if (!gameName) return;
-    errorMessage = '';
-
-    try {
-      const response = await fetch(`${API_BASE}/dev/games`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ game_name: gameName })
-      });
-      
-      if (response.ok) {
-        gameName = '';
-        loadGames();
-      } else {
-        const errorData = await response.json();
-        // Capture 403 or any other backend error message
-        errorMessage = errorData.detail || 'Failed to create game.';
-      }
-    } catch (err) {
-      console.error('Error creating game');
-      errorMessage = 'Connection error.';
-    }
-  }
-
-  function logout() {
+  function handleLogout() {
     token = '';
-    games = [];
-    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    currentPage = 'landing';
   }
 </script>
 
-<svelte:head>
-  <title>White Wolf</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-</svelte:head>
+<div class="app-layout">
+  <Navbar {token} on:nav={handleNavigation} on:auth={handleAuthRedirect} on:logout={handleLogout} />
 
-<div class="app-container">
-  <header class="main-header">
-    <div class="container navbar">
-      <div class="logo">
-        <span class="icon">🐺</span>
-        <span class="brand">WHITE WOLF <small class="badge">SaaS</small></span>
-      </div>
-      {#if token}
-        <button on:click={logout} class="outline contrast logout-btn">Logout</button>
-      {/if}
-    </div>
-  </header>
-
- <main class="container body-content">
-    {#if !token}
-      <div class="auth-wrapper">
-        {#if currentForm === 'login'}
-          <Login 
-            {API_BASE} 
-            successMessage={globalSuccessMessage} 
-            on:loginSuccess={onLoginSuccess} 
-            on:switch={(e) => currentForm = e.detail} 
-          />
-        {:else}
-          <Register 
-            {API_BASE} 
-            on:registerSuccess={onRegisterSuccess} 
-            on:switch={(e) => currentForm = e.detail} 
-          />
-        {/if}
-      </div>
-    {:else}
-      {#if selectedGameId}
-        <GameDetails 
-          {token} 
-          {API_BASE} 
-          gameId={selectedGameId} 
-          onBack={() => selectedGameId = null} 
-        />
-      {:else} <div class="dashboard-grid">
-          <div class="panel-card creation-panel">
-            <h3>Register New Game</h3>
-            <p>Create a new project workspace. Maximum limit is 5 active games per developer account. </p>
-            
-            <form on:submit|preventDefault={createGame}>
-              <label for="game_name">Project Title</label>
-              <input type="text" id="game_name" bind:value={gameName} placeholder="Cyberpunk Odyssey" required>
-              
-              {#if errorMessage}
-                <p class="error-msg">{errorMessage}</p>
-              {/if}
-              
-              <button type="submit" class="primary-action">Create Game</button>
-            </form>
-          </div>
-
-          <div class="panel-card workspace-panel">
-            <h3>Your Games</h3>
-            
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Project Name</th>
-                    <th>Users</th>
-                    <th style="text-align: right; width: 80px;">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each games as game}
-                    <tr>
-                      <td class="game-title">
-                        <button on:click={() => selectedGameId = game.id} class="link-btn">
-                          ✨ {game.game_name}
-                        </button>
-                      </td>
-                      <td><code class="user-number">{game.current_users ?? 0}/{game.max_users ?? 100}</code></td>
-                      <td style="text-align: right;">
-                        <button 
-                          on:click={() => deleteGame(game.id, game.game_name)} 
-                          class="outline contrast delete-btn"
-                        >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  {:else}
-                    <tr>
-                      <td colspan="3" class="empty-state">No active projects found. Spin up a database cluster using the registration block.</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      {/if} {/if}
+  <main class="main-content">
+    {#if currentPage === 'landing'}
+      <Landing {API_BASE} on:getStarted={() => { authMode = 'register'; currentPage = 'auth'; }} />
+    {:else if currentPage === 'auth'}
+      <Auth {API_BASE} mode={authMode} on:loginSuccess={handleLoginSuccess} on:back={() => currentPage = 'landing'} />
+    {:else if currentPage === 'dashboard'}
+      <Dashboard {API_BASE} {token} />
+    {/if}
   </main>
+
+  <Footer />
 </div>
 
 <style>
   :global(body) {
-    background-color: #0d1117 !important;
-    color: #c9d1d9 !important;
+    margin: 0;
+    padding: 0;
+    background-color: #0f172a; 
     font-family: system-ui, -apple-system, sans-serif;
   }
-  .link-btn {
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    color: #58a6ff !important;
-    text-decoration: none;
-    cursor: pointer;
-    text-align: left;
-    box-shadow: none !important;
+
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
-  .link-btn:hover {
-    text-decoration: underline;
+
+  .main-content {
+    flex: 1 0 auto; 
+    display: flex;
+    flex-direction: column;
   }
-  .app-container { min-height: 100vh; display: flex; flex-direction: column; }
-  .main-header { background: #161b22; border-bottom: 1px solid #30363d; padding: 0.75rem 0; }
-  .navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0 !important; }
-  .logo { display: flex; align-items: center; gap: 0.5rem; }
-  .brand { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; color: #f0f6fc; }
-  .badge { background: #1f6feb; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; vertical-align: middle; margin-left: 4px; }
-  .logout-btn { padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 6px; margin-bottom: 0; }
-  .body-content { flex: 1; padding-top: 3rem; padding-bottom: 3rem; }
-  .auth-wrapper { display: flex; justify-content: center; align-items: center; padding: 2rem 0; }
-  :global(.auth-card) { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 2.5rem; width: 100%; max-width: 480px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
-  :global(.auth-card h2) { color: #f0f6fc; margin-bottom: 0.25rem; font-weight: 700; }
-  :global(.subtitle) { color: #8b949e; font-size: 0.9rem; margin-bottom: 2rem; }
-  :global(.primary-action) { background: #238636; border: 1px solid #2ea44f; color: white; font-weight: 600; border-radius: 6px; transition: background 0.2s ease, transform 0.1s ease; margin-top: 1rem; }
-  :global(.primary-action:hover) { background: #2ea44f; border-color: #3fb950; }
-  :global(.primary-action:active) { transform: scale(0.98); }
-  :global(.signup-color) { background: #1f6feb; border-color: #388bfd; }
-  :global(.signup-color:hover) { background: #388bfd; border-color: #58a6ff; }
-  :global(.switch-prompt) { text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: #8b949e; margin-bottom: 0; }
-  :global(.switch-prompt a) { color: #58a6ff; text-decoration: none; font-weight: 500; }
-  :global(.switch-prompt a:hover) { text-decoration: underline; }
-  :global(.container) {max-width: 1400px !important;width: 95% !important;}
-  .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
-  @media (min-width: 992px) { .dashboard-grid { grid-template-columns: 320px 1fr; } }
-  .panel-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; }
-  .panel-card h3 { color: #f0f6fc; font-size: 1.2rem; font-weight: 600; margin-bottom: 0.25rem; }
-  .panel-desc { color: #8b949e; font-size: 0.85rem; margin-bottom: 1.5rem; }
-  .table-container { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-  th { color: #8b949e !important; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #21262d !important; padding: 0.75rem 1rem !important; }
-  td { border-bottom: 1px solid #21262d !important; padding: 1rem !important; vertical-align: middle; }
-  .game-title { font-weight: 600; color: #c9d1d9; }
-  .users-number { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.8rem; background: #0d1117 !important; border: 1px solid #30363d; padding: 4px 8px !important; border-radius: 6px; color: #58a6ff !important; display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .token-snippet.secret { color: #ff7b72 !important; max-width: 320px; }
-  .empty-state { text-align: center; color: #8b949e; font-style: italic; padding: 3rem !important; }
-  .error-msg {color: #ff7b72;background: rgba(248, 81, 73, 0.1);border: 1px solid rgba(248, 81, 73, 0.2);padding: 0.5rem 0.75rem;border-radius: 6px;font-size: 0.85rem;margin-top: 0.5rem;margin-bottom: 0.5rem;}
 </style>
