@@ -25,6 +25,7 @@
 
     <section id="setup">
       <h2>Setup</h2>
+      <p>You can download Gwynbleidd plugin form godot AssetLib</p>
       <p>Add the integration script to your project as an Autoload (Singleton). After adding it, initialize the connection in your script using your unique Game ID and API keys:</p>
       <pre><code># Inside your main scene or game manager
 func _ready():
