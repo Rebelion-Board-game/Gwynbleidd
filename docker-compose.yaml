@@ -10,12 +10,13 @@ services:
       - gwynbleidd_net
 
   app:
-    image: ghcr.io/rebelion-board-game/gwynbleidd/gwynbleidd:lates
-    image: test
+    image: ghcr.io/rebelion-board-game/gwynbleidd/gwynbleidd:latest
     restart: unless-stopped
     env_file: .env  
     environment:
       DB_HOST: db
+    volumes:
+      - ./.env:/app/.env
     ports:
       - "4443:4443"
     depends_on:

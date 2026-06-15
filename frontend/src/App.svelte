@@ -11,7 +11,7 @@
   let authMode = 'login';      
   let token = '';              
   
-  const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:8000';
+  const APP_URL = window.APP_CONFIG?.VITE_APP_URL || import.meta.env.VITE_APP_URL || 'http://localhost:8000';
   const API_BASE = `${APP_URL}/api/dev`;
 
   onMount(() => {

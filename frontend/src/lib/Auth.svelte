@@ -42,6 +42,7 @@
 <style>
   .auth-page {
     min-height: 80vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -52,6 +53,7 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: center;
   }
 
   .auth-container {

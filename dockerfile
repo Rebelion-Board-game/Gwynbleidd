@@ -18,4 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 COPY --from=build-frontend /app/frontend/dist ./static
-CMD ["python", "src/main.py"]
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "4443"]
