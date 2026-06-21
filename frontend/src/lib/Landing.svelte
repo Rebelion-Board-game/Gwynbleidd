@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
-  const appVersion = import.meta.env.VITE_APP_VERSION || 'v1.0.0 Stable';
+  const appVersion = import.meta.env.VITE_APP_VERSION || 'v1.1.1 Stable';
 </script>
 
 <div class="landing-container">
