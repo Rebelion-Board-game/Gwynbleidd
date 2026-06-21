@@ -93,6 +93,18 @@ def init_db():
                             CONSTRAINT unique_game_player UNIQUE (game_id, username)
                         );
                     """)
+
+                    # 5. Game data
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS player_save_data (
+                            player_id INT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+                            game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+                            data JSONB NOT NULL DEFAULT '{}'::jsonb,
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                            
+                            CONSTRAINT check_data_size CHECK (pg_column_size(data) <= 1048576)
+                        );
+                    """)
                     conn.commit()
             
             print("PostgreSQL connection pool initialized and tables verified successfully.")

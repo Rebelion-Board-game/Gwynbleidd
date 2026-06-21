@@ -56,6 +56,15 @@ class PlayerAuthPayload(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
 
+class SaveDataEntry(BaseModel):
+    player_id: int
+    username: str
+    data: dict
+    updated_at: datetime
+
+class GameSavesResponse(BaseModel):
+    saves: list[SaveDataEntry]
+
 
 # --- 1. DEVELOPER JWT ---
 def create_access_token(data: dict):
@@ -404,3 +413,67 @@ def delete_game_player(game_id: int,player_id: int,db: Connection = Depends(get_
         l.error(f"delete endpoint error: {e}")
         raise HTTPException(status_code=500, detail="delete endpoint error")
  
+
+# SAVED DATA
+@dev_router.get("/api/dev/games/{game_id}/saves", response_model=GameSavesResponse)
+def get_game_saves(game_id: int, db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    """
+    Fetch all player save states for a specific game.
+    """
+    try:
+        with db.cursor() as cursor:
+            # Verify game ownership
+            cursor.execute("SELECT id FROM games WHERE user_id = %s AND id = %s;", (current_user_id, game_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=403, detail="Game not found or unauthorized.")
+
+            # Get saves combined with usernames
+            cursor.execute(
+                """
+                SELECT s.player_id, p.username, s.data, s.updated_at 
+                FROM player_save_data s
+                JOIN players p ON s.player_id = p.id
+                WHERE s.game_id = %s
+                ORDER BY s.updated_at DESC;
+                """,
+                (game_id,)
+            )
+            rows = cursor.fetchall()
+            return {"saves": rows}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        l.error(f"get_game_saves error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+
+@dev_router.get("/api/dev/games/{game_id}/players/{player_id}/save")
+def get_player_save_details(game_id: int, player_id: int, db: Connection = Depends(get_db), current_user_id: int = Depends(get_current_user_id)):
+    """
+    Fetch raw JSON save data for a specific player.
+    """
+    try:
+        with db.cursor() as cursor:
+            # Verify game ownership
+            cursor.execute("SELECT id FROM games WHERE user_id = %s AND id = %s;", (current_user_id, game_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=403, detail="Game not found or unauthorized.")
+
+            # Fetch the actual JSON structure
+            cursor.execute(
+                "SELECT data, updated_at FROM player_save_data WHERE player_id = %s AND game_id = %s;",
+                (player_id, game_id)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Save data not found for this player.")
+                
+            return row
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        l.error(f"get_player_save_details error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")

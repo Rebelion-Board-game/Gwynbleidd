@@ -30,6 +30,7 @@ coloredlogs.install(
     },
     field_styles={},
 )
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Before startup
@@ -61,7 +62,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(godot_router)
 app.include_router(dev_router, include_in_schema=False)
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 
 if __name__ == "__main__":

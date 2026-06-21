@@ -21,7 +21,7 @@ godot_router = APIRouter(tags=["Godot Client API"])
 
 SECRET_KEY_PLAYER = os.getenv("JWT_SECRET","WhiteWolf_Player")
 ALGORITHM = "HS256"
-
+security = HTTPBearer()
 
 # --- Pydantic Validation Models ---
 class ScorePayload(BaseModel):
@@ -61,6 +61,12 @@ class PlayerAuthPayload(BaseModel):
     password: str = Field(..., min_length=6)
 
 
+class SaveDataPayload(BaseModel):
+    data: dict = Field(
+        ...,
+        examples=[{"level": 5, "gold": 250, "inventory": ["sword", "potion"]}]
+    )
+
 # --- 2. PLAYERS JWT ---
 def create_player_access_token(player_id: int, game_id: int, username: str):
     expire = datetime.now(timezone.utc) + timedelta(days=3)
@@ -72,6 +78,21 @@ def create_player_access_token(player_id: int, game_id: int, username: str):
         "exp": expire
     }
     return jwt.encode(to_encode, SECRET_KEY_PLAYER, algorithm=ALGORITHM)
+
+def get_current_player(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """
+    Validates player's JWT token and returns decoded payload.
+    """
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY_PLAYER, algorithms=[ALGORITHM])
+        if payload.get("role") != "player":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid token role.")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token.")
 
 # --- GODOT ENDPOINTS ---
 
@@ -290,3 +311,100 @@ def login_game_player(request: Request, game_id: int, payload: PlayerAuthPayload
         db.rollback()
         l.error(f"login user error {e}")
         raise HTTPException(status_code=500, detail="Login user error")
+
+
+@godot_router.post("/api/godot/{game_id}/save", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+def save_game_data(
+    request: Request, 
+    game_id: int, 
+    payload: SaveDataPayload, 
+    x_api_key: str = Header(...), 
+    content_length: Optional[int] = Header(None),
+    current_player: dict = Depends(get_current_player),
+    db: Connection = Depends(get_db)
+):
+    # Protect against massive payload submissions (max 1MB)
+    if content_length and content_length > 1048576:
+        raise HTTPException(status_code=413, detail="Save data too large. Max 1MB.")
+
+    player_id = int(current_player["sub"])
+    token_game_id = int(current_player["game_id"])
+
+    if token_game_id != game_id:
+        raise HTTPException(status_code=403, detail="Token game_id mismatch.")
+
+    import json
+    save_json_string = json.dumps(payload.data)
+
+    try:
+        with db.cursor() as cursor:
+            # Verify API Key
+            cursor.execute("SELECT id FROM games WHERE api_key = %s AND id = %s;", (x_api_key, game_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=401, detail="Invalid API Key or Game ID.")
+
+            # UPSERT: Insert or update if player_id already exists
+            cursor.execute("""
+                INSERT INTO player_save_data (player_id, game_id, data, updated_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (player_id)
+                DO UPDATE SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP;
+            """, (player_id, game_id, save_json_string))
+            
+            db.commit()
+            return {"message": "Game data saved successfully!"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        if "check_data_size" in str(e):
+            raise HTTPException(status_code=400, detail="Save data exceeded database limit (1MB).")
+        l.error(f"Save game data error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+
+
+@godot_router.get("/api/godot/{game_id}/save")
+@limiter.limit("20/minute")
+def load_game_data(
+    request: Request,
+    game_id: int,
+    x_api_key: str = Header(...),
+    current_player: dict = Depends(get_current_player),
+    db: Connection = Depends(get_db)
+):
+    player_id = int(current_player["sub"])
+    token_game_id = int(current_player["game_id"])
+
+    if token_game_id != game_id:
+        raise HTTPException(status_code=403, detail="Token game_id mismatch.")
+
+    try:
+        with db.cursor() as cursor:
+            # Verify API Key
+            cursor.execute("SELECT id FROM games WHERE api_key = %s AND id = %s;", (x_api_key, game_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=401, detail="Invalid API Key or Game ID.")
+
+            # Fetch save record
+            cursor.execute(
+                "SELECT data, updated_at FROM player_save_data WHERE player_id = %s;",
+                (player_id,)
+            )
+            row = cursor.fetchone()
+
+            # Return empty structure if no save exists yet
+            if not row:
+                return {"data": {}, "updated_at": None, "message": "No save data found."}
+
+            return {
+                "data": row["data"],
+                "updated_at": row["updated_at"]
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        l.error(f"Load game data error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
