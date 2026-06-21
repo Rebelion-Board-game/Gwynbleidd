@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import LeaderboardManager from './LeaderboardManager.svelte';
   import UsersManager from './UsersManager.svelte';
+  import SaveDataManager from './SaveDataManager.svelte';
 
   export let token;
   export let API_BASE;
@@ -21,6 +22,9 @@
   let loadingKey = false;
   let copied = false;
   let copiedSecret = false;
+
+  // State to manage active tab
+  let activeTab = 'credentials'; 
 
   onMount(async () => {
     try {
@@ -153,62 +157,89 @@
         <p class="subtitle">Game ID: <code>{gameDetails.id}</code></p>
       </header>
 
-      <section class="panel-card credentials-card">
-        <h3>Security Credentials</h3>
-        <p class="card-desc">Use these credentials inside your Godot project configuration.</p>
-        
-        <div class="credential-group">
-          <label for="api_key">API Key</label>
-          <div class="credential-wrapper">
-            <input 
-              type={showApiKey ? "text" : "password"} 
-              id="api_key" 
-              value={apiKey || "••••••••••••••••••••••••••••••••"} 
-              readonly 
-              class="secure-input"
-            >
-            <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopy}>
-              {copied ? "Copied!" : "Copy"}
-            </button>
-            <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiKey}>
-              {showApiKey ? "Hide" : "Reveal"}
-            </button>
-          </div>
-          <div class="revoke-container">
-            <button type="button" class="revoke-btn" disabled={regenerating} on:click={handleRegenerate}>
-              {regenerating ? "Regenerating..." : "Revoke & Regenerate Key"}
-            </button>
-          </div>
-        </div>
+      <div class="tabs-nav">
+        <button class="tab-link" class:active={activeTab === 'credentials'} on:click={() => activeTab = 'credentials'}>
+          🔑 Credentials
+        </button>
+        <button class="tab-link" class:active={activeTab === 'users'} on:click={() => activeTab = 'users'}>
+          👥 Users Manager
+        </button>
+        <button class="tab-link" class:active={activeTab === 'leaderboard'} on:click={() => activeTab = 'leaderboard'}>
+          🏆 Leaderboard
+        </button>
+        <button class="tab-link" class:active={activeTab === 'saves'} on:click={() => activeTab = 'saves'}>
+          💾 Player Saves
+        </button>
+      </div>
 
-        <div class="credential-group">
-          <label for="api_secret">API Secret</label>
-          <div class="credential-wrapper">
-            <input 
-              type={showApiSecret ? "text" : "password"} 
-              id="api_secret" 
-              value={apiSecret || "••••••••••••••••••••••••••••••••"} 
-              readonly 
-              class="secure-input"
-            >
-            <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopySecret}>
-              {copiedSecret ? "Copied!" : "Copy"}
-            </button>
-            <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiSecret}>
-              {showApiSecret ? "Hide" : "Reveal"}
-            </button>
+      <div class="tab-content">
+        {#if activeTab === 'credentials'}
+          <section class="panel-card credentials-card">
+            <h3>Security Credentials</h3>
+            <p class="card-desc">Use these credentials inside your Godot project configuration.</p>
+            
+            <div class="credential-group">
+              <label for="api_key">API Key</label>
+              <div class="credential-wrapper">
+                <input 
+                  type={showApiKey ? "text" : "password"} 
+                  id="api_key" 
+                  value={apiKey || "••••••••••••••••••••••••••••••••"} 
+                  readonly 
+                  class="secure-input"
+                >
+                <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopy}>
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiKey}>
+                  {showApiKey ? "Hide" : "Reveal"}
+                </button>
+              </div>
+              <div class="revoke-container">
+                <button type="button" class="revoke-btn" disabled={regenerating} on:click={handleRegenerate}>
+                  {regenerating ? "Regenerating..." : "Revoke & Regenerate Key"}
+                </button>
+              </div>
+            </div>
+
+            <div class="credential-group">
+              <label for="api_secret">API Secret</label>
+              <div class="credential-wrapper">
+                <input 
+                  type={showApiSecret ? "text" : "password"} 
+                  id="api_secret" 
+                  value={apiSecret || "••••••••••••••••••••••••••••••••"} 
+                  readonly 
+                  class="secure-input"
+                >
+                <button type="button" class="action-btn" disabled={loadingKey || regenerating} on:click={handleCopySecret}>
+                  {copiedSecret ? "Copied!" : "Copy"}
+                </button>
+                <button type="button" class="action-btn" disabled={loadingKey} on:click={toggleRevealApiSecret}>
+                  {showApiSecret ? "Hide" : "Reveal"}
+                </button>
+              </div>
+            </div>
+          </section>
+        {/if}
+
+        {#if activeTab === 'users'}
+          <div class="panel-card main-content-panel">
+            <UsersManager {token} {API_BASE} {gameId} />
           </div>
-        </div>
-      </section>
+        {/if}
 
-      <div class="panels-stack">
-        <div class="panel-card main-content-panel">
-          <UsersManager {token} {API_BASE} {gameId} />
-        </div>
+        {#if activeTab === 'leaderboard'}
+          <div class="panel-card main-content-panel">
+            <LeaderboardManager {token} {API_BASE} {gameId} />
+          </div>
+        {/if}
 
-        <div class="panel-card main-content-panel">
-          <LeaderboardManager {token} {API_BASE} {gameId} />
-        </div>
+        {#if activeTab === 'saves'}
+          <div class="panel-card main-content-panel">
+            <SaveDataManager {token} {API_BASE} {gameId} />
+          </div>
+        {/if}
       </div>
     {:else}
       <div class="error-state">Game workspace not found.</div>
@@ -225,7 +256,7 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   .top-nav {
@@ -272,6 +303,43 @@
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     color: #f1f5f9;
+  }
+
+  /* Tabs Navigation Styling */
+  .tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid #334155;
+    padding-bottom: 2px;
+  }
+
+  .tab-link {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+  }
+
+  .tab-link:hover {
+    color: #f1f5f9;
+    background: #1e293b;
+  }
+
+  .tab-link.active {
+    color: #38bdf8;
+    border-bottom: 2px solid #38bdf8;
+    background: #1e293b;
+  }
+
+  .tab-content {
+    width: 100%;
   }
 
   .panel-card {
@@ -370,13 +438,6 @@
   .revoke-btn:hover:not(:disabled) {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
-  }
-
-  .panels-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    width: 100%;
   }
 
   .main-content-panel {
