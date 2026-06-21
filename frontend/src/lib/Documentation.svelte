@@ -39,7 +39,7 @@
 
     <section id="setup">
       <h2>Setup</h2>
-      <p>You can download the Gwynbleidd plugin directly from the Godot AssetLib or clone it from GitHub.</p>
+      <p>You can download the Gwynbleidd plugin directly from the Godot AssetLib or clone it from <a href="https://github.com/Rebelion-Board-game/Gwynbleidd-godot-plugin" target="_blank" class="api-link">GitHub</a>.</p>
       <p>Add the integration script to your project as an Autoload (Singleton). After adding it, initialize the connection in your script using your unique Game ID and API keys:</p>
       
       <div class="code-block" data-lang="GDScript">
