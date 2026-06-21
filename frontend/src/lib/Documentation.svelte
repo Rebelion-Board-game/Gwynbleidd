@@ -115,7 +115,7 @@ func _on_game_loaded(success, response):
       </div>
       
       <div class="info-note">
-        <p>💡 <strong>Looking for a full runtime execution workflow?</strong> Check out the complete <code>Example.gd</code> script included directly in our GitHub plugin repository to see the full, step-by-step registration, sequential login validation, and save-state lifecycle in action.</p>
+        <p>💡 <strong>Looking for a full runtime execution workflow?</strong> Check out the complete <code>https://github.com/Rebelion-Board-game/Gwynbleidd-godot-plugin/blob/main/Example.gd</code> script included directly in our GitHub plugin repository to see the full, step-by-step registration, sequential login validation, and save-state lifecycle in action.</p>
       </div>
     </section>
   </main>
