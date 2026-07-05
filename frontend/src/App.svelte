@@ -6,6 +6,7 @@
   import Auth from './lib/Auth.svelte';
   import Dashboard from './lib/Dashboard.svelte';
   import Documentation from './lib/Documentation.svelte';
+  import Contact from './lib/Conntact.svelte';
 
   let currentPage = 'landing'; 
   let authMode = 'login';      
@@ -56,6 +57,8 @@
       <Dashboard {API_BASE} {token} />
     {:else if currentPage === 'docs'}
       <Documentation {APP_URL} />
+    {:else if currentPage === 'contact'}
+      <Contact on:nav={handleNavigation} />
     {/if}
   </main>
 
