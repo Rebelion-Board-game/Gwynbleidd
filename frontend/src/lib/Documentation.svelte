@@ -5,6 +5,21 @@
 
   $: apiDocsUrl = `${APP_URL}/docs/godot`
 
+  let copiedId = null;
+
+  function copyCode(e, id) {
+    const button = e.currentTarget;
+    const codeBlock = button.closest('.code-block');
+    const codeText = codeBlock.querySelector('code').innerText;
+
+    navigator.clipboard.writeText(codeText).then(() => {
+      copiedId = id;
+      setTimeout(() => {
+        copiedId = null;
+      }, 2000);
+    });
+  }
+
   onMount(() => {
     if (typeof window !== 'undefined' && window.Prism) {
       window.Prism.highlightAll();
@@ -13,6 +28,7 @@
 </script>
 
 <svelte:head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-gdscript.min.js"></script>
 </svelte:head>
@@ -43,6 +59,9 @@
       <p>Add the integration script to your project as an Autoload (Singleton). After adding it, initialize the connection in your script using your unique Game ID and API keys:</p>
       
       <div class="code-block" data-lang="GDScript">
+        <button class="copy-btn" on:click={(e) => copyCode(e, 'setup')}>
+          {copiedId === 'setup' ? '✓ Copied' : 'Copy'}
+        </button>
         <pre><code class="language-gdscript"># Initialize the API helper in your main scene or game manager
 func _ready():
     GwynbleiddApi.setup("YOUR_API_KEY", "YOUR_API_SECRET", YOUR_GAME_ID)</code></pre>
@@ -57,6 +76,9 @@ func _ready():
       <p>The system supports player registration and login. Methods are asynchronous and emit signals upon completion.</p>
       
       <div class="code-block" data-lang="GDScript">
+        <button class="copy-btn" on:click={(e) => copyCode(e, 'auth')}>
+          {copiedId === 'auth' ? '✓ Copied' : 'Copy'}
+        </button>
         <pre><code class="language-gdscript"># Register a new player account
 GwynbleiddApi.register_player("username", "password")
 
@@ -75,6 +97,9 @@ func _on_player_logged_in(success, data):
       <p>Scores are submitted with a SHA256 integrity hash to prevent client-side tampering. You can fetch the leaderboard rows at any time.</p>
       
       <div class="code-block" data-lang="GDScript">
+        <button class="copy-btn" on:click={(e) => copyCode(e, 'scores')}>
+          {copiedId === 'scores' ? '✓ Copied' : 'Copy'}
+        </button>
         <pre><code class="language-gdscript"># Submit a score safely
 GwynbleiddApi.submit_score("player_name", 2000)
 
@@ -94,6 +119,9 @@ func _on_leaderboard_loaded(success, scores):
       <p>Store and retrieve full game state objects securely in the cloud. Cloud save operations require an authorized player session.</p>
       
       <div class="code-block" data-lang="GDScript">
+        <button class="copy-btn" on:click={(e) => copyCode(e, 'saves')}>
+          {copiedId === 'saves' ? '✓ Copied' : 'Copy'}
+        </button>
         <pre><code class="language-gdscript"># Prepare save state data as a Dictionary
 var save_state = &#123;
     "level": 14,
@@ -195,35 +223,39 @@ func _on_game_loaded(success, response):
     color: #cbd5e1;
     line-height: 1.7;
     margin-bottom: 1rem;
+    text-align: left; 
   }
 
+  
   .code-block {
     position: relative;
-    background: #0d1117;
+    background: #1d1f21 !important; 
     border: 1px solid #30363d;
     border-radius: 12px;
     margin: 1.5rem 0;
-    padding-top: 2.5rem;
+    padding-top: 2.75rem;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     overflow: hidden;
   }
 
+  
   .code-block::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 2.5rem;
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
+    height: 2.75rem;
+    background: #151718;
+    border-bottom: 1px solid #25282a;
     z-index: 2;
   }
 
+ 
   .code-block pre::before {
     content: '';
     position: absolute;
-    top: 0.85rem;
+    top: 0.95rem;
     left: 1.25rem;
     width: 10px;
     height: 10px;
@@ -233,12 +265,13 @@ func _on_game_loaded(success, response):
     z-index: 3;
   }
 
+ 
   .code-block::after {
     content: attr(data-lang);
     position: absolute;
-    top: 0.7rem;
+    top: 0.85rem;
     right: 1.25rem;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-family: ui-monospace, monospace;
     color: #8b949e;
     font-weight: 700;
@@ -247,35 +280,53 @@ func _on_game_loaded(success, response):
     z-index: 3;
   }
 
+ 
+  .copy-btn {
+    position: absolute;
+    top: 3.5rem;
+    right: 1rem;
+    background: rgba(33, 37, 41, 0.85);
+    border: 1px solid #444c56;
+    color: #c9d1d9;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-family: sans-serif;
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 10;
+  }
+
+  .code-block:hover .copy-btn {
+    opacity: 1; 
+  }
+
+  .copy-btn:hover {
+    background: #31363c;
+    color: #38bdf8;
+  }
+
+ 
   pre {
-    margin: 0;
-    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    margin: 0 !important;
+    padding: 1.25rem !important;
+    background: transparent !important;
     overflow-x: auto;
-    max-width: 100%;
-    box-sizing: border-box;
-    background: transparent;
+    text-align: left !important; 
   }
 
   code {
-    font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.875rem;
-    line-height: 1.7;
-    white-space: pre;
-    tab-size: 4;
-    word-break: normal;
-    display: block;
-    position: relative;
-    z-index: 1;
+    font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace !important;
+    font-size: 0.875rem !important;
+    line-height: 1.6 !important;
+    text-align: left !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    word-spacing: normal !important;
+    background: transparent !important;
   }
 
-  .code-block code .token.comment { color: #8b949e; font-style: italic; }
-  .code-block code .token.keyword { color: #ff7b72; }
-  .code-block code .token.string { color: #a5d6ff; }
-  .code-block code .token.function { color: #d2a8ff; }
-  .code-block code .token.number { color: #79c0ff; }
-  .code-block code .token.operator { color: #ffab70; }
-  .code-block code .token.punctuation { color: #c9d1d9; }
-  .code-block code .token.builtin { color: #ffa657; }
 
   .info-note {
     background: rgba(30, 41, 59, 0.4);

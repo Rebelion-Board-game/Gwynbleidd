@@ -15,6 +15,7 @@ from fun.database import get_db
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from datetime import datetime
+from fun.limiter import limiter
 
 
 # JWT
@@ -98,7 +99,8 @@ def create_access_token(data: dict):
 # --- 3. DEVELOPER MANAGEMENT PANEL ---
 
 @dev_router.post("/api/dev/register", status_code=status.HTTP_201_CREATED)
-def register_developer(payload: DeveloperRegister, db: Connection = Depends(get_db)):
+@limiter.limit("3/minute")
+def register_developer(request: Request,payload: DeveloperRegister, db: Connection = Depends(get_db)):
     hashed_password = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
     with db.cursor() as cursor:
@@ -207,7 +209,8 @@ def delete_developer_game(
 
 
 @dev_router.post("/api/dev/login")
-def login_developer(payload: DeveloperRegister, db: Connection = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_developer(request: Request,payload: DeveloperRegister, db: Connection = Depends(get_db)):
     with db.cursor() as cursor:
         cursor.execute("SELECT id, email, password_hash FROM users WHERE email = %s;", (payload.email,))
         user = cursor.fetchone()
