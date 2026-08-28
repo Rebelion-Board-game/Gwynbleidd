@@ -38,8 +38,27 @@ jobs:
           name: docker-image
           path: /tmp/image.tar
 
-  push:
+  scan:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          input: /tmp/image.tar
+          format: table
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'
+
+  push:
+    needs: [build, scan]
     runs-on: ubuntu-latest
     permissions:
       contents: read
