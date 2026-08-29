@@ -1,5 +1,5 @@
 # Stage 1: Build Frontend
-FROM node:22-alpine AS build-frontend
+FROM node:26-alpine AS build-frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
     
+
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade "setuptools>=78.1.1" "msgpack>=1.2.1" \
+    && pip uninstall -y setuptools pip
 COPY . .
 COPY --from=build-frontend /app/frontend/dist ./static
 

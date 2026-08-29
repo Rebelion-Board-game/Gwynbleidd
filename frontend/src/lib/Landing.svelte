@@ -2,16 +2,29 @@
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
-  const appVersion = import.meta.env.VITE_APP_VERSION || 'v1.1.1 Stable';
+  const appVersion = import.meta.env.VITE_APP_VERSION || 'v1.0.0 Stable';
 </script>
+
+
 
 <div class="landing-container">
   <section class="hero">
     <div class="brand-badge">{appVersion}</div>
+    <div class="logo-wrapper">
+    <svg viewBox="0 0 24 24" width="80" height="80" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L3 9l2 11 7 2 7-2 2-11-9-7z"/>
+      <path d="M12 22V12"/>
+      <path d="M12 12L5 9.5"/>
+      <path d="M12 12l7-2.5"/>
+      <path d="M12 6l-4 3.5 4 2.5 4-2.5L12 6z"/>
+      <path d="M6.5 14.5L12 12l5.5 2.5"/>
+    </svg>
+  </div>
     <h1>Gwynbleidd</h1>
     <p class="tagline">Self-hosted, opensource backend for Godot 4.</p>
     <p class="sub-tagline">Inspired by SilentWolf</p>
     
+
     <div class="cta-group">
       <button class="btn-primary" on:click={() => dispatch('getStarted')}>
         Get Started
@@ -22,21 +35,41 @@
     </div>
   </section>
 
-  <section class="features">
-    <div class="feature-card">
-      <div class="feature-icon">🔌</div>
-      <h3>Godot Plugin</h3>
-      <p>Drop-in GDScript addon. Connect your entire backend with just two lines of code.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h3>Easy to Use</h3>
-      <p>Simple player authentication and management. Set up your user database and leaderboards in minutes.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🏠</div>
-      <h3>Self-Hosted</h3>
-      <p>Your VPS, your database, your rules. Zero pricing tiers or sudden usage billing limits.</p>
+  <section class="features-section">
+    <h2>Everything your game needs, right out of the box</h2>
+    <p class="section-subtitle">No multi-platform configuration hell. Pure GDScript API tailored to Godot's lifecycle.</p>
+    
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <h3>Godot Autoload</h3>
+        <p>Drop-in GDScript addon. Intercept system signals, connect your whole database structure and initialize everything with just two lines of code.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Tamper Protection</h3>
+        <p>Built-in client-side SHA256 payload signing. Prevent score manipulation, spoofed network tokens, and leaderboards corruption seamlessly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏠</div>
+        <h3>Self-Hosted Control</h3>
+        <p>Your VPS, your database, your rules. Zero pricing tiers, no vendor lock-in, and absolutely no surprise usage billing spikes or limits.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏅</div>
+        <h3>Global Leaderboards</h3>
+        <p>Instantly spawn multiple tables, secure asynchronous score submissions, and fetch clean player rows effortlessly inside your nodes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☁️</div>
+        <h3>Secure Cloud Saves</h3>
+        <p>Store, load and update full custom dictionary game-state snapshots directly linked with authenticated player sessions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Player Auth</h3>
+        <p>Async registration and login pipelines that handle local storage session tracking and emit cleaner signals upon completion.</p>
+      </div>
     </div>
   </section>
 </div>
@@ -49,7 +82,7 @@
     padding: 8rem 2rem; 
     display: flex;
     flex-direction: column;
-    gap: 8rem; 
+    gap: 5rem; 
     box-sizing: border-box;
   }
 
@@ -143,10 +176,11 @@
   }
 
   .feature-card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: #0d1117;
+    border: 1px solid #30363d;
     border-radius: 12px;
     padding: 2.5rem 2rem;
+    text-align: left;
     transition: transform 0.2s ease, border-color 0.2s ease;
   }
 
